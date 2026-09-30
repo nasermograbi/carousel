@@ -10,16 +10,32 @@ type PicsumImage = {
 };
 
 export async function fetchImages(): Promise<ImageCarouselItem[]> {
-  const response = await fetch("https://picsum.photos/v2/list?limit=10");
+  const response = await fetch("https://picsum.photos/v2/list?limit=1000");
   const data: PicsumImage[] = await response.json();
 
   return data.map(toCarouselImage);
 }
 
-const toCarouselImage = (image: PicsumImage): ImageCarouselItem => ({
-  id: image.id,
-  width: image.width,
-  height: image.height,
-  src: image.download_url,
-  alt: `Photo by ${image.author}`,
-});
+const TEST_SIZES = [
+  { width: 1200, height: 800 }, // landscape 3:2
+  { width: 800, height: 1200 }, // portrait 2:3
+  { width: 1000, height: 1000 }, // square
+  { width: 1600, height: 400 }, // panorama 4:1
+  { width: 400, height: 1200 }, // tall 1:3
+  { width: 1280, height: 720 }, // widescreen 16:9
+];
+
+const toCarouselImage = (
+  image: PicsumImage,
+  index: number,
+): ImageCarouselItem => {
+  const { width, height } = TEST_SIZES[index % TEST_SIZES.length];
+
+  return {
+    id: image.id,
+    width,
+    height,
+    src: `https://picsum.photos/id/${image.id}/${width}/${height}`,
+    alt: `Photo by ${image.author}`,
+  };
+};
