@@ -10,7 +10,7 @@ type PicsumImage = {
 };
 
 export async function fetchImages(): Promise<ImageCarouselItem[]> {
-  const response = await fetch("https://picsum.photos/v2/list?limit=1000");
+  const response = await fetch("https://picsum.photos/v2/list?limit=100");
   const data: PicsumImage[] = await response.json();
 
   return data.map(toCarouselImage);
