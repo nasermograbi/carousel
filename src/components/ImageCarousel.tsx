@@ -11,11 +11,13 @@ import type { ImageCarouselItem } from "../types/carousel";
 
 type ImageCarouselProps = {
   items: ImageCarouselItem[];
+  className?: string;
 };
 
 const LIST_COPIES = 3;
 const GAP = 32;
 const OVERSCAN = 1000;
+const MAX_ITEM_WIDTH_RATIO = 0.9;
 
 const useElementSize = (ref: RefObject<HTMLElement | null>) => {
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -36,27 +38,40 @@ const useElementSize = (ref: RefObject<HTMLElement | null>) => {
   return size;
 };
 
-const getDisplayWidth = (rowHeight: number, item: ImageCarouselItem) =>
-  rowHeight * (item.width / item.height);
+const getDisplaySize = (
+  rowHeight: number,
+  maxWidth: number,
+  item: ImageCarouselItem,
+) => {
+  const aspectRatio = item.width / item.height;
+  const width = Math.min(rowHeight * aspectRatio, maxWidth);
+  return { width, height: width / aspectRatio };
+};
 
-const getItemOffsets = (rowHeight: number, items: ImageCarouselItem[]) => {
+const getItemOffsets = (
+  rowHeight: number,
+  maxWidth: number,
+  items: ImageCarouselItem[],
+) => {
   const offsets = [0];
   for (const item of items) {
     const lastOffset = offsets[offsets.length - 1];
-    offsets.push(lastOffset + getDisplayWidth(rowHeight, item) + GAP);
+    const { width } = getDisplaySize(rowHeight, maxWidth, item);
+    offsets.push(lastOffset + width + GAP);
   }
   return offsets;
 };
 
-export const ImageCarousel = ({ items }: ImageCarouselProps) => {
+export const ImageCarousel = ({ items, className }: ImageCarouselProps) => {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [scrollLeft, setScrollLeft] = useState(0);
   const { width: viewportWidth, height: rowHeight } =
     useElementSize(scrollerRef);
+  const maxItemWidth = viewportWidth * MAX_ITEM_WIDTH_RATIO;
 
   const offsets = useMemo(
-    () => getItemOffsets(rowHeight, items),
-    [rowHeight, items],
+    () => getItemOffsets(rowHeight, maxItemWidth, items),
+    [rowHeight, maxItemWidth, items],
   );
   const listWidth = offsets[items.length];
 
@@ -85,7 +100,7 @@ export const ImageCarousel = ({ items }: ImageCarouselProps) => {
   }, [listWidth]);
 
   return (
-    <div className="h-[60vh] overflow-x-auto" ref={scrollerRef}>
+    <div className={`overflow-x-auto ${className ?? ""}`} ref={scrollerRef}>
       <div
         className="relative h-full"
         style={{ width: listWidth * LIST_COPIES }}
@@ -93,7 +108,11 @@ export const ImageCarousel = ({ items }: ImageCarouselProps) => {
         {Array.from({ length: LIST_COPIES }, (_, copyIndex) =>
           items.map((item, index) => {
             const left = copyIndex * listWidth + offsets[index];
-            const width = getDisplayWidth(rowHeight, item);
+            const { width, height } = getDisplaySize(
+              rowHeight,
+              maxItemWidth,
+              item,
+            );
             const isNearScreen =
               // The item ends after the window starts...
               left + width > scrollLeft - OVERSCAN &&
@@ -105,12 +124,12 @@ export const ImageCarousel = ({ items }: ImageCarouselProps) => {
             return (
               <figure
                 key={`${copyIndex}-${item.id}`}
-                className="absolute top-0"
-                style={{ left, width }}
+                className="absolute"
+                style={{ left, top: (rowHeight - height) / 2, width }}
               >
                 <img
                   className="object-cover"
-                  style={{ width, height: rowHeight }}
+                  style={{ width, height }}
                   src={item.src}
                   alt={item.alt}
                 />

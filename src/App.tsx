@@ -12,7 +12,12 @@ function App() {
 
   if (images.length === 0) return <p>Loading...</p>;
 
-  return <ImageCarousel items={images} />;
+  return (
+    <ImageCarousel
+      items={images}
+      className="h-[clamp(240px,60svh,720px)]"
+    />
+  );
 }
 
 export default App;
