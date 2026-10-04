@@ -1,20 +1,59 @@
-import { useEffect, useLayoutEffect, useState, type RefObject } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import { flushSync } from "react-dom";
+import { remapPosition } from "./layout";
 
 export const LIST_COPIES = 3;
 
+type Snapshot = {
+  offsets: number[];
+  viewportWidth: number;
+  scrollLeft: number;
+};
+
 export const useInfiniteScroll = (
   scrollerRef: RefObject<HTMLElement | null>,
-  listWidth: number,
+  offsets: number[],
+  viewportWidth: number,
 ) => {
+  const listWidth = offsets[offsets.length - 1];
   const [scrollLeft, setScrollLeft] = useState(0);
+
+  const previous = useRef<Snapshot | null>(null);
 
   useLayoutEffect(() => {
     const scroller = scrollerRef.current;
     if (!scroller) return;
-    scroller.scrollLeft = listWidth;
+
+    const prev = previous.current;
+
+    const isResize =
+      prev !== null &&
+      prev.viewportWidth > 0 &&
+      prev.offsets.length === offsets.length;
+
+    if (isResize) {
+      const prevListWidth = prev.offsets[prev.offsets.length - 1];
+      const prevCenter =
+        (prev.scrollLeft + prev.viewportWidth / 2) % prevListWidth;
+      const center = remapPosition(prev.offsets, offsets, prevCenter);
+      scroller.scrollLeft = listWidth + center - viewportWidth / 2;
+    } else {
+      scroller.scrollLeft = listWidth;
+    }
+
+    previous.current = {
+      offsets,
+      viewportWidth,
+      scrollLeft: scroller.scrollLeft,
+    };
     setScrollLeft(scroller.scrollLeft);
-  }, [scrollerRef, listWidth]);
+  }, [scrollerRef, offsets, viewportWidth, listWidth]);
 
   useEffect(() => {
     const scroller = scrollerRef.current;
@@ -27,6 +66,7 @@ export const useInfiniteScroll = (
         scroller.scrollLeft -= listWidth;
       }
       flushSync(() => setScrollLeft(scroller.scrollLeft));
+      if (previous.current) previous.current.scrollLeft = scroller.scrollLeft;
     };
 
     scroller.addEventListener("scroll", onScroll, { passive: true });

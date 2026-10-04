@@ -9,11 +9,30 @@ type PicsumImage = {
   download_url: string;
 };
 
-export async function fetchImages(): Promise<ImageCarouselItem[]> {
-  const response = await fetch("https://picsum.photos/v2/list?limit=100");
-  const data: PicsumImage[] = await response.json();
+// The list endpoint returns at most 100 images per page.
+const PAGE_SIZE = 100;
 
-  return data.map(toCarouselImage);
+const fetchPage = async (
+  page: number,
+  limit: number,
+): Promise<PicsumImage[]> => {
+  const response = await fetch(
+    `https://picsum.photos/v2/list?page=${page}&limit=${limit}`,
+  );
+  return response.json();
+};
+
+export async function fetchImages(count: number): Promise<ImageCarouselItem[]> {
+  const pageSize = Math.min(count, PAGE_SIZE);
+  const pageCount = Math.ceil(count / pageSize);
+  const pages = await Promise.all(
+    Array.from({ length: pageCount }, (_, i) => fetchPage(i + 1, pageSize)),
+  );
+  const catalogue = pages.flat();
+
+  return Array.from({ length: count }, (_, i) =>
+    toCarouselImage(catalogue[i % catalogue.length], i),
+  );
 }
 
 const TEST_SIZES = [

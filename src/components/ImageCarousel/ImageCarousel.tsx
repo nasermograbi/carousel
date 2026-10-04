@@ -1,5 +1,6 @@
 import { useMemo, useRef } from "react";
 import { useElementSize } from "../../hooks/useElementSize";
+import { useHorizontalWheel } from "../../hooks/useHorizontalWheel";
 import type { ImageCarouselItem } from "../../types/carousel";
 import { getDisplaySize, getItemOffsets } from "./layout";
 import { LIST_COPIES, useInfiniteScroll } from "./useInfiniteScroll";
@@ -23,7 +24,8 @@ export const ImageCarousel = ({ items, className }: ImageCarouselProps) => {
     [rowHeight, maxItemWidth, items],
   );
   const listWidth = offsets[items.length];
-  const scrollLeft = useInfiniteScroll(scrollerRef, listWidth);
+  const scrollLeft = useInfiniteScroll(scrollerRef, offsets, viewportWidth);
+  useHorizontalWheel(scrollerRef);
 
   return (
     <div className={`overflow-x-auto ${className ?? ""}`} ref={scrollerRef}>
@@ -49,7 +51,7 @@ export const ImageCarousel = ({ items, className }: ImageCarouselProps) => {
 
             return (
               <figure
-                key={`${copyIndex}-${item.id}`}
+                key={`${copyIndex}-${index}`}
                 className="absolute"
                 style={{ left, top: (rowHeight - height) / 2, width }}
               >

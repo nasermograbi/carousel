@@ -8,8 +8,22 @@ export const getDisplaySize = (
   item: ImageCarouselItem,
 ) => {
   const aspectRatio = item.width / item.height;
-  const width = Math.min(rowHeight * aspectRatio, maxWidth);
-  return { width, height: width / aspectRatio };
+  const width = Math.round(Math.min(rowHeight * aspectRatio, maxWidth));
+  return { width, height: Math.round(width / aspectRatio) };
+};
+
+export const remapPosition = (
+  oldOffsets: number[],
+  newOffsets: number[],
+  position: number,
+) => {
+  const index = oldOffsets.findLastIndex((offset) => offset <= position);
+  const fraction =
+    (position - oldOffsets[index]) /
+    (oldOffsets[index + 1] - oldOffsets[index]);
+  return (
+    newOffsets[index] + fraction * (newOffsets[index + 1] - newOffsets[index])
+  );
 };
 
 export const getItemOffsets = (
