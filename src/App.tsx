@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ImageCarousel } from "./components/ImageCarousel";
+import { ImageCarousel } from "./components/ImageCarousel/ImageCarousel";
 import { fetchImages } from "./services/picsum";
 import type { ImageCarouselItem } from "./types/carousel";
 
