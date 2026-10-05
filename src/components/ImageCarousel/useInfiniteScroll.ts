@@ -8,8 +8,11 @@ import {
 import { flushSync } from "react-dom";
 import { remapPosition } from "./layout";
 
-const getCopyCount = (listWidth: number, viewportWidth: number) =>
-  listWidth > 0 ? 2 + Math.max(1, Math.ceil(viewportWidth / listWidth)) : 3;
+const MIN_TRACK_WIDTH = 1_000_000;
+const SCROLL_IDLE_MS = 150;
+
+const getCopyCount = (listWidth: number) =>
+  listWidth > 0 ? Math.max(3, Math.ceil(MIN_TRACK_WIDTH / listWidth)) : 3;
 
 type Snapshot = {
   offsets: number[];
@@ -23,6 +26,8 @@ export const useInfiniteScroll = (
   viewportWidth: number,
 ) => {
   const listWidth = offsets[offsets.length - 1];
+  const copies = getCopyCount(listWidth);
+  const middleStart = Math.floor(copies / 2) * listWidth;
   const [scrollLeft, setScrollLeft] = useState(0);
 
   const previous = useRef<Snapshot | null>(null);
@@ -43,9 +48,9 @@ export const useInfiniteScroll = (
       const prevCenter =
         (prev.scrollLeft + prev.viewportWidth / 2) % prevListWidth;
       const center = remapPosition(prev.offsets, offsets, prevCenter);
-      scroller.scrollLeft = listWidth + center - viewportWidth / 2;
+      scroller.scrollLeft = middleStart + center - viewportWidth / 2;
     } else {
-      scroller.scrollLeft = listWidth;
+      scroller.scrollLeft = middleStart;
     }
 
     previous.current = {
@@ -54,25 +59,53 @@ export const useInfiniteScroll = (
       scrollLeft: scroller.scrollLeft,
     };
     setScrollLeft(scroller.scrollLeft);
-  }, [scrollerRef, offsets, viewportWidth, listWidth]);
+  }, [scrollerRef, offsets, viewportWidth, middleStart]);
 
   useEffect(() => {
     const scroller = scrollerRef.current;
     if (!scroller) return;
+    let idleTimer: number | undefined;
 
-    const onScroll = () => {
-      if (scroller.scrollLeft < listWidth) {
-        scroller.scrollLeft += listWidth;
-      } else if (scroller.scrollLeft >= listWidth * 2) {
-        scroller.scrollLeft -= listWidth;
-      }
+    const sync = () => {
       flushSync(() => setScrollLeft(scroller.scrollLeft));
       if (previous.current) previous.current.scrollLeft = scroller.scrollLeft;
     };
 
-    scroller.addEventListener("scroll", onScroll, { passive: true });
-    return () => scroller.removeEventListener("scroll", onScroll);
-  }, [scrollerRef, listWidth]);
+    // Same content, moved back into the middle copy.
+    const recenter = () => {
+      scroller.scrollLeft = middleStart + (scroller.scrollLeft % listWidth);
+      sync();
+    };
 
-  return { scrollLeft, copies: getCopyCount(listWidth, viewportWidth) };
+    const onScroll = () => {
+      sync();
+
+      // Jumping mid-scroll would cancel momentum on iOS, so wait until
+      // scrolling stops. Only jump right away if an end is close.
+      const edge = scroller.clientWidth * 2;
+      const maxScrollLeft = listWidth * copies - scroller.clientWidth;
+      if (
+        scroller.scrollLeft < edge ||
+        scroller.scrollLeft > maxScrollLeft - edge
+      ) {
+        recenter();
+      }
+
+      window.clearTimeout(idleTimer);
+      idleTimer = window.setTimeout(() => {
+        const isInMiddle =
+          scroller.scrollLeft >= middleStart &&
+          scroller.scrollLeft < middleStart + listWidth;
+        if (!isInMiddle) recenter();
+      }, SCROLL_IDLE_MS);
+    };
+
+    scroller.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.clearTimeout(idleTimer);
+      scroller.removeEventListener("scroll", onScroll);
+    };
+  }, [scrollerRef, listWidth, copies, middleStart]);
+
+  return { scrollLeft, copies };
 };
