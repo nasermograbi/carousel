@@ -1,6 +1,6 @@
 import type { ImageCarouselItem } from "../../types/carousel";
 
-const GAP = 32;
+const GAP = 16;
 
 export const getDisplaySize = (
   rowHeight: number,

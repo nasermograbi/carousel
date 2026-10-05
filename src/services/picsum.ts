@@ -1,4 +1,4 @@
-import type { ImageCarouselItem } from "../types/carousel";
+import type { ImageCarouselItem, ImageSrcResolver } from "../types/carousel";
 
 type PicsumImage = {
   id: string;
@@ -19,6 +19,9 @@ const fetchPage = async (
   const response = await fetch(
     `https://picsum.photos/v2/list?page=${page}&limit=${limit}`,
   );
+  if (!response.ok) {
+    throw new Error(`Picsum request failed with status ${response.status}`);
+  }
   return response.json();
 };
 
@@ -29,11 +32,15 @@ export async function fetchImages(count: number): Promise<ImageCarouselItem[]> {
     Array.from({ length: pageCount }, (_, i) => fetchPage(i + 1, pageSize)),
   );
   const catalogue = pages.flat();
+  if (catalogue.length === 0) throw new Error("Picsum returned no images");
 
   return Array.from({ length: count }, (_, i) =>
     toCarouselImage(catalogue[i % catalogue.length], i),
   );
 }
+
+export const getPicsumSrc: ImageSrcResolver = (item, { width, height }) =>
+  `https://picsum.photos/id/${item.id}/${width}/${height}.webp`;
 
 const TEST_SIZES = [
   { width: 1200, height: 800 }, // landscape 3:2
@@ -54,7 +61,6 @@ const toCarouselImage = (
     id: image.id,
     width,
     height,
-    src: `https://picsum.photos/id/${image.id}/${width}/${height}`,
     alt: `Photo by ${image.author}`,
   };
 };

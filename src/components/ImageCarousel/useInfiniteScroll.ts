@@ -8,7 +8,8 @@ import {
 import { flushSync } from "react-dom";
 import { remapPosition } from "./layout";
 
-export const LIST_COPIES = 3;
+const getCopyCount = (listWidth: number, viewportWidth: number) =>
+  listWidth > 0 ? 2 + Math.max(1, Math.ceil(viewportWidth / listWidth)) : 3;
 
 type Snapshot = {
   offsets: number[];
@@ -73,5 +74,5 @@ export const useInfiniteScroll = (
     return () => scroller.removeEventListener("scroll", onScroll);
   }, [scrollerRef, listWidth]);
 
-  return scrollLeft;
+  return { scrollLeft, copies: getCopyCount(listWidth, viewportWidth) };
 };
