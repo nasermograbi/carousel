@@ -6,33 +6,34 @@ import type { ImageCarouselItem } from "./types/carousel";
 const IMAGE_COUNTS = [12, 1000];
 const CAROUSEL_HEIGHT = "h-[clamp(240px,min(60svh,100vw),720px)]";
 
-type Result = {
-  request: string;
+type Loaded = {
+  key: string;
   images: ImageCarouselItem[] | null;
 };
 
 function App() {
   const [count, setCount] = useState(IMAGE_COUNTS[0]);
   const [attempt, setAttempt] = useState(0);
-  const [result, setResult] = useState<Result | null>(null);
+  const [loaded, setLoaded] = useState<Loaded | null>(null);
 
-  const request = `${count}:${attempt}`;
-  const current = result?.request === request ? result : null;
+  const fetchKey = `${count}:${attempt}`;
+  const isLoading = loaded?.key !== fetchKey;
 
   useEffect(() => {
     let ignore = false;
     fetchImages(count).then(
       (images) => {
-        if (!ignore) setResult({ request, images });
+        if (!ignore) setLoaded({ key: fetchKey, images });
       },
-      () => {
-        if (!ignore) setResult({ request, images: null });
+      (error) => {
+        console.error(error);
+        if (!ignore) setLoaded({ key: fetchKey, images: null });
       },
     );
     return () => {
       ignore = true;
     };
-  }, [count, request]);
+  }, [count, fetchKey]);
 
   return (
     <main className="py-10">
@@ -64,14 +65,14 @@ function App() {
         </div>
       </header>
 
-      {current === null ? (
+      {isLoading ? (
         <div
           role="status"
           className={`${CAROUSEL_HEIGHT} flex items-center justify-center text-sm text-neutral-500`}
         >
           Loading images…
         </div>
-      ) : current.images === null ? (
+      ) : loaded.images === null ? (
         <div
           role="alert"
           className={`${CAROUSEL_HEIGHT} flex items-center justify-center gap-3 text-sm text-neutral-700`}
@@ -87,7 +88,7 @@ function App() {
         </div>
       ) : (
         <ImageCarousel
-          items={current.images}
+          items={loaded.images}
           getImageSrc={getPicsumSrc}
           className={CAROUSEL_HEIGHT}
         />

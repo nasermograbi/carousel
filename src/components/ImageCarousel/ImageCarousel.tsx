@@ -15,7 +15,7 @@ const OVERSCAN = 1000;
 const MAX_ITEM_WIDTH_RATIO = 0.9;
 const SIZE_STEP = 100;
 
-const getRequestSize = (item: ImageCarouselItem, displayHeight: number) => {
+const getDownloadSize = (item: ImageCarouselItem, displayHeight: number) => {
   const height =
     Math.ceil((displayHeight * window.devicePixelRatio) / SIZE_STEP) *
     SIZE_STEP;
@@ -76,7 +76,7 @@ export const ImageCarousel = ({
                   <img
                     className="bg-neutral-200 object-cover"
                     style={{ width, height }}
-                    src={getImageSrc(item, getRequestSize(item, height))}
+                    src={getImageSrc(item, getDownloadSize(item, height))}
                     alt={item.alt}
                   />
                   <figcaption
